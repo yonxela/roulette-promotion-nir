@@ -1,5 +1,5 @@
 const SUPABASE_URL = 'https://rxrodfskmvldozpznyrp.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_rm-U3aeXydu4W0wdSMLW5w_I4LIWr-0T7y89U_R1_X72Y';
+const SUPABASE_KEY = 'sb_publishable_rm-U3aeXydu4W0wdSMLW5w_I4LIW5MO';
 
 // Cambio de nombre para evitar conflicto con la librería global
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
