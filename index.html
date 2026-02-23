@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promoción Ruleta Nocturna - NUEVO NIR</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Background elements for aesthetics -->
+        <div class="bg-blur neon-blue"></div>
+        <div class="bg-blur neon-purple"></div>
+
+        <!-- Header -->
+        <header>
+            <div class="logo-container">
+                <h1>NUEVO <span>NIR</span></h1>
+            </div>
+            <button id="btn-config" class="icon-btn" title="Configuración">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                    </path>
+                </svg>
+            </button>
+        </header>
+
+        <main>
+            <!-- View 1: Registration Form -->
+            <section id="registration-view" class="card fade-in">
+                <h2>Registro de Participante</h2>
+                <form id="promo-form">
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label for="invoice-number">No. de Factura</label>
+                            <input type="text" id="invoice-number" required placeholder="Ej. 12345">
+                        </div>
+                        <div class="input-group">
+                            <label for="vehicle-plate">Placa del Vehículo</label>
+                            <input type="text" id="vehicle-plate" required placeholder="Ej. P-123ABC">
+                        </div>
+                        <div class="input-group">
+                            <label for="pilot-name">Nombre del Piloto</label>
+                            <input type="text" id="pilot-name" required placeholder="Escriba su nombre completo">
+                        </div>
+                        <div class="input-group">
+                            <label for="total-consumption">Total de Consumo</label>
+                            <input type="number" id="total-consumption" step="0.01" required placeholder="Q 0.00">
+                        </div>
+                    </div>
+                    <div class="form-footer">
+                        <p class="current-date-display">Fecha: <span id="auto-date"></span></p>
+                        <button type="submit" class="btn-primary">Continuar a la Ruleta</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- View 2: Roulette -->
+            <section id="roulette-view" class="fade-in hidden">
+                <div class="roulette-container">
+                    <div class="roulette-wrapper">
+                        <div id="roulette-wheel" class="wheel">
+                            <!-- Segments will be generated via JS -->
+                        </div>
+                        <div class="roulette-pointer"></div>
+                    </div>
+                    <div class="play-controls">
+                        <button id="btn-spin" class="btn-spin">¡GIRAR!</button>
+                        <button id="btn-back" class="btn-text">Regresar al registro</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Success Overlay -->
+            <div id="winner-overlay" class="overlay hidden">
+                <div class="winner-card">
+                    <h3>¡FELICIDADES!</h3>
+                    <p id="winner-pilot-name"></p>
+                    <div class="prize-display">
+                        <span id="won-prize-text"></span>
+                    </div>
+                    <button id="btn-done" class="btn-primary">Aceptar</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Configuración de Premios</h2>
+                    <button id="btn-close-settings" class="icon-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-section">
+                        <h3>Lista de Premios</h3>
+                        <div id="prizes-list" class="prizes-list">
+                            <!-- Prize rows -->
+                        </div>
+                        <button id="btn-add-prize" class="btn-secondary">+ Agregar Premio</button>
+                    </div>
+                    <div class="settings-section">
+                        <h3>Historial de Participantes</h3>
+                        <div class="table-wrapper">
+                            <table id="participants-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Factura</th>
+                                        <th>Piloto</th>
+                                        <th>Premio</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- History rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn-save-settings" class="btn-primary">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
