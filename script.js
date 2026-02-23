@@ -1,7 +1,8 @@
 const SUPABASE_URL = 'https://rxrodfskmvldozpznyrp.supabase.co';
-const SUPABASE_KEY = 'TU_API_KEY_AQUI'; // <--- PEGA TU ANON KEY COMPLETA AQUÍ
+const SUPABASE_KEY = 'sb_publishable_rm-U3aeXydu4W0wdSMLW5w_I4LIWr-0T7y89U_R1_X72Y';
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- State Management ---
