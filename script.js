@@ -1,7 +1,12 @@
+const SUPABASE_URL = 'https://rxrodfskmvldozpznyrp.supabase.co';
+const SUPABASE_KEY = 'TU_API_KEY_AQUI'; // <--- PEGA TU ANON KEY COMPLETA AQUÍ
+
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- State Management ---
     let state = {
-        participants: JSON.parse(localStorage.getItem('fe_participants')) || [],
+        participants: [], // De la nube
         prizes: JSON.parse(localStorage.getItem('fe_prizes')) || [
             { text: 'PlayStation 5', color: '#FF007F' },
             { text: 'Iphone 15', color: '#00F2FE' },
@@ -37,49 +42,71 @@ document.addEventListener('DOMContentLoaded', () => {
     const participantsTableBody = document.querySelector('#participants-table tbody');
 
     // --- Initialization ---
-    function init() {
+    async function init() {
         const today = new Date().toLocaleDateString();
         autoDateSpan.textContent = today;
+        
+        await fetchParticipants();
         renderWheel();
         renderHistory();
+    }
+
+    // --- Data Fetching ---
+    async function fetchParticipants() {
+        try {
+            const { data, error } = await supabase
+                .from('participantes')
+                .select('*')
+                .order('id', { ascending: false });
+
+            if (error) throw error;
+            state.participants = data || [];
+            renderHistory();
+        } catch (err) {
+            console.error('Error cargando participantes:', err.message);
+        }
     }
 
     // --- Navigation ---
     function showView(view) {
         registrationView.classList.add('hidden');
         rouletteView.classList.add('hidden');
-
+        
         if (view === 'registration') {
             registrationView.classList.remove('hidden');
         } else if (view === 'roulette') {
             rouletteView.classList.remove('hidden');
-            renderWheel(); // Re-render to ensure latest prizes
+            renderWheel();
         }
     }
 
     // --- Registration Logic ---
-    promoForm.addEventListener('submit', (e) => {
+    promoForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-
+        
         const invoiceNum = document.getElementById('invoice-number').value.trim();
         const vehiclePlate = document.getElementById('vehicle-plate').value.trim();
         const pilotName = document.getElementById('pilot-name').value.trim();
         const consumption = document.getElementById('total-consumption').value.trim();
 
-        // Check if invoice already used
-        const alreadyUsed = state.participants.find(p => p.invoice === invoiceNum);
-        if (alreadyUsed) {
-            alert('Este número de factura ya ha participado.');
+        // Validar contra la nube
+        const { data, error } = await supabase
+            .from('participantes')
+            .select('factura')
+            .eq('factura', invoiceNum);
+
+        if (data && data.length > 0) {
+            alert('Este número de factura ya ha participado (Registro sincronizado).');
             return;
         }
 
         state.currentParticipant = {
-            invoice: invoiceNum,
-            plate: vehiclePlate,
-            pilot: pilotName,
-            consumption: consumption,
-            date: new Date().toLocaleString(),
-            prize: null
+            factura: invoiceNum,
+            placa: vehiclePlate,
+            piloto: pilotName,
+            consumo: consumption,
+            fecha: new Date().toLocaleString(),
+            premio: null
         };
 
         showView('roulette');
@@ -97,31 +124,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const numSegments = state.prizes.length;
         const segmentAngle = 360 / numSegments;
 
-        state.prizes.forEach((prize, i) => {
-            const segment = document.createElement('div');
-            segment.className = 'wheel-segment';
-            segment.style.position = 'absolute';
-            segment.style.width = '100%';
-            segment.style.height = '100%';
-            segment.style.background = prize.color;
-
-            // Draw segment as a wedge using clip-path
-            // Correct logic for radial segments
-            const startAngle = i * segmentAngle;
-            const endAngle = (i + 1) * segmentAngle;
-
-            // Using SVG or complex CSS for wedges is better. 
-            // Simple approach: rotate the text and let the wheel background handle wedges
-            // For a high-end look, let's use Conic-Gradient for the wheel background
-        });
-
-        const gradient = state.prizes.map((p, i) =>
+        const gradient = state.prizes.map((p, i) => 
             `${p.color} ${(i * 360) / state.prizes.length}deg ${((i + 1) * 360) / state.prizes.length}deg`
         ).join(', ');
 
         wheel.style.background = `conic-gradient(${gradient})`;
 
-        // Add Labels
         state.prizes.forEach((prize, i) => {
             const label = document.createElement('div');
             label.className = 'segment-label';
@@ -152,41 +160,40 @@ document.addEventListener('DOMContentLoaded', () => {
         const prizeIndex = Math.floor(Math.random() * numPrizes);
         const prize = state.prizes[prizeIndex];
 
-        // Calculation: 360 / numPrizes = angle per prize
-        // We want the indicator at the top (0deg) to point to the winner
-        // The wheel rotates CLOCKWISE. So if target is index 2, we rotate by (360 - index*angle - halfAngle)
         const segmentAngle = 360 / numPrizes;
-        const extraSpins = 5 + Math.floor(Math.random() * 5); // 5 to 10 extra spins
+        const extraSpins = 5 + Math.floor(Math.random() * 5);
         const rotation = (extraSpins * 360) + (360 - (prizeIndex * segmentAngle) - (segmentAngle / 2));
 
         wheel.style.transform = `rotate(${rotation}deg)`;
 
-        setTimeout(() => {
+        setTimeout(async () => {
             state.isSpinning = false;
             btnSpin.disabled = false;
+            
+            state.currentParticipant.premio = prize.text;
+            
+            // --- GUARDAR EN LA NUBE ---
+            const { error } = await supabase
+                .from('participantes')
+                .insert([state.currentParticipant]);
 
-            // Complete participant data
-            state.currentParticipant.prize = prize.text;
-            state.participants.push(state.currentParticipant);
+            if (error) {
+                alert('Error al sincronizar: ' + error.message);
+            } else {
+                await fetchParticipants();
 
-            // Save to local storage
-            localStorage.setItem('fe_participants', JSON.stringify(state.participants));
-
-            // Show Winner
-            winnerPilotName.textContent = state.currentParticipant.pilot;
-            wonPrizeText.textContent = prize.text;
-            winnerOverlay.classList.remove('hidden');
-
-            // Confetti!
-            confetti({
-                particleCount: 150,
-                spread: 70,
-                origin: { y: 0.6 },
-                colors: ['#00F2FE', '#FF007F', '#00FF88']
-            });
-
-            renderHistory();
-        }, 6100); // Wait for transition
+                winnerPilotName.textContent = state.currentParticipant.piloto;
+                wonPrizeText.textContent = prize.text;
+                winnerOverlay.classList.remove('hidden');
+                
+                confetti({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#00F2FE', '#FF007F', '#00FF88']
+                });
+            }
+        }, 6100);
     });
 
     btnDone.addEventListener('click', () => {
@@ -221,7 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
             prizesList.appendChild(row);
         });
 
-        // Add remove handlers
         document.querySelectorAll('.btn-remove-prize').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const index = e.currentTarget.dataset.index;
@@ -239,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSaveSettings.addEventListener('click', () => {
         const textInputs = document.querySelectorAll('.edit-prize-text');
         const colorInputs = document.querySelectorAll('.edit-prize-color');
-
+        
         const newPrizes = [];
         textInputs.forEach((input, i) => {
             newPrizes.push({
@@ -256,13 +262,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderHistory() {
         participantsTableBody.innerHTML = '';
-        [...state.participants].reverse().forEach(p => {
+        state.participants.forEach(p => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${p.date.split(',')[0]}</td>
-                <td>${p.invoice}</td>
-                <td>${p.pilot}</td>
-                <td style="font-weight: 700; color: var(--success)">${p.prize}</td>
+                <td>${p.fecha ? p.fecha.split(',')[0] : ''}</td>
+                <td>${p.factura}</td>
+                <td>${p.piloto}</td>
+                <td style="font-weight: 700; color: var(--success)">${p.premio}</td>
             `;
             participantsTableBody.appendChild(row);
         });
