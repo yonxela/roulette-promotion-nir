@@ -1,14 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- State Management ---
     let state = {
-        participants: JSON.parse(localStorage.getItem('nir_participants')) || [],
-        prizes: JSON.parse(localStorage.getItem('nir_prizes')) || [
+        participants: JSON.parse(localStorage.getItem('fe_participants')) || [],
+        prizes: JSON.parse(localStorage.getItem('fe_prizes')) || [
             { text: 'PlayStation 5', color: '#FF007F' },
             { text: 'Iphone 15', color: '#00F2FE' },
             { text: 'Q 500.00', color: '#00FF88' },
             { text: 'Q 200.00', color: '#FFD700' },
             { text: 'Combustible', color: '#FF8800' },
-            { text: 'Gorra NIR', color: '#8800FF' },
+            { text: 'Gorra Full Energy', color: '#8800FF' },
             { text: 'Sigue Participando', color: '#444444' },
             { text: 'Descuento 10%', color: '#FF5500' }
         ],
@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.participants.push(state.currentParticipant);
 
             // Save to local storage
-            localStorage.setItem('nir_participants', JSON.stringify(state.participants));
+            localStorage.setItem('fe_participants', JSON.stringify(state.participants));
 
             // Show Winner
             winnerPilotName.textContent = state.currentParticipant.pilot;
@@ -249,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         state.prizes = newPrizes;
-        localStorage.setItem('nir_prizes', JSON.stringify(state.prizes));
+        localStorage.setItem('fe_prizes', JSON.stringify(state.prizes));
         settingsModal.classList.add('hidden');
         renderWheel();
     });
