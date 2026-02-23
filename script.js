@@ -1,13 +1,13 @@
 const SUPABASE_URL = 'https://rxrodfskmvldozpznyrp.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_rm-U3aeXydu4W0wdSMLW5w_I4LIWr-0T7y89U_R1_X72Y';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+// Cambio de nombre para evitar conflicto con la librería global
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- State Management ---
     let state = {
-        participants: [], // De la nube
+        participants: [],
         prizes: JSON.parse(localStorage.getItem('fe_prizes')) || [
             { text: 'PlayStation 5', color: '#FF007F' },
             { text: 'Iphone 15', color: '#00F2FE' },
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Data Fetching ---
     async function fetchParticipants() {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('participantes')
                 .select('*')
                 .order('id', { ascending: false });
@@ -90,27 +90,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const pilotName = document.getElementById('pilot-name').value.trim();
         const consumption = document.getElementById('total-consumption').value.trim();
 
-        // Validar contra la nube
-        const { data, error } = await supabase
-            .from('participantes')
-            .select('factura')
-            .eq('factura', invoiceNum);
+        try {
+            // Validar contra la nube
+            const { data, error } = await supabaseClient
+                .from('participantes')
+                .select('factura')
+                .eq('factura', invoiceNum);
 
-        if (data && data.length > 0) {
-            alert('Este número de factura ya ha participado (Registro sincronizado).');
-            return;
+            if (data && data.length > 0) {
+                alert('Este número de factura ya ha participado (Registro sincronizado en la nube).');
+                return;
+            }
+
+            state.currentParticipant = {
+                factura: invoiceNum,
+                placa: vehiclePlate,
+                piloto: pilotName,
+                consumo: consumption,
+                fecha: new Date().toLocaleString(),
+                premio: null
+            };
+
+            showView('roulette');
+        } catch (err) {
+            alert('Error de conexión con la base de datos: ' + err.message);
         }
-
-        state.currentParticipant = {
-            factura: invoiceNum,
-            placa: vehiclePlate,
-            piloto: pilotName,
-            consumo: consumption,
-            fecha: new Date().toLocaleString(),
-            premio: null
-        };
-
-        showView('roulette');
     });
 
     btnBack.addEventListener('click', () => {
@@ -174,12 +178,12 @@ document.addEventListener('DOMContentLoaded', () => {
             state.currentParticipant.premio = prize.text;
             
             // --- GUARDAR EN LA NUBE ---
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('participantes')
                 .insert([state.currentParticipant]);
 
             if (error) {
-                alert('Error al sincronizar: ' + error.message);
+                alert('Error al sincronizar el premio: ' + error.message);
             } else {
                 await fetchParticipants();
 
