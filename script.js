@@ -1,11 +1,9 @@
 const SUPABASE_URL = 'https://rxrodfskmvldozpznyrp.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_rm-U3aeXydu4W0wdSMLW5w_I4LIW5MO';
 
-// Cambio de nombre para evitar conflicto con la librería global
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- State Management ---
     let state = {
         participants: [],
         prizes: JSON.parse(localStorage.getItem('fe_prizes')) || [
@@ -22,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
         isSpinning: false
     };
 
-    // --- DOM Elements ---
     const registrationView = document.getElementById('registration-view');
     const rouletteView = document.getElementById('roulette-view');
     const promoForm = document.getElementById('promo-form');
@@ -42,63 +39,53 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnDone = document.getElementById('btn-done');
     const participantsTableBody = document.querySelector('#participants-table tbody');
 
-    // --- Initialization ---
     async function init() {
         const today = new Date().toLocaleDateString();
         autoDateSpan.textContent = today;
-        
         await fetchParticipants();
         renderWheel();
         renderHistory();
     }
 
-    // --- Data Fetching ---
     async function fetchParticipants() {
         try {
             const { data, error } = await supabaseClient
                 .from('participantes')
-                .select('*')
-                .order('id', { ascending: false });
+                .select('*');
 
             if (error) throw error;
             state.participants = data || [];
             renderHistory();
         } catch (err) {
-            console.error('Error cargando participantes:', err.message);
+            console.error('Error fetching:', err.message);
         }
     }
 
-    // --- Navigation ---
     function showView(view) {
         registrationView.classList.add('hidden');
         rouletteView.classList.add('hidden');
-        
-        if (view === 'registration') {
-            registrationView.classList.remove('hidden');
-        } else if (view === 'roulette') {
+        if (view === 'registration') registrationView.classList.remove('hidden');
+        else if (view === 'roulette') {
             rouletteView.classList.remove('hidden');
             renderWheel();
         }
     }
 
-    // --- Registration Logic ---
     promoForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
         const invoiceNum = document.getElementById('invoice-number').value.trim();
         const vehiclePlate = document.getElementById('vehicle-plate').value.trim();
         const pilotName = document.getElementById('pilot-name').value.trim();
         const consumption = document.getElementById('total-consumption').value.trim();
 
         try {
-            // Validar contra la nube
             const { data, error } = await supabaseClient
                 .from('participantes')
                 .select('factura')
                 .eq('factura', invoiceNum);
 
             if (data && data.length > 0) {
-                alert('Este número de factura ya ha participado (Registro sincronizado en la nube).');
+                alert('Esta factura ya ha participado.');
                 return;
             }
 
@@ -110,29 +97,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 fecha: new Date().toLocaleString(),
                 premio: null
             };
-
             showView('roulette');
         } catch (err) {
-            alert('Error de conexión con la base de datos: ' + err.message);
+            console.error('Error:', err.message);
         }
     });
 
-    btnBack.addEventListener('click', () => {
-        if (!state.isSpinning) {
-            showView('registration');
-        }
-    });
+    btnBack.addEventListener('click', () => { if (!state.isSpinning) showView('registration'); });
 
-    // --- Roulette Logic ---
     function renderWheel() {
         wheel.innerHTML = '';
         const numSegments = state.prizes.length;
         const segmentAngle = 360 / numSegments;
-
-        const gradient = state.prizes.map((p, i) => 
-            `${p.color} ${(i * 360) / state.prizes.length}deg ${((i + 1) * 360) / state.prizes.length}deg`
-        ).join(', ');
-
+        const gradient = state.prizes.map((p, i) => `${p.color} ${(i * 360) / numSegments}deg ${((i + 1) * 360) / numSegments}deg`).join(', ');
         wheel.style.background = `conic-gradient(${gradient})`;
 
         state.prizes.forEach((prize, i) => {
@@ -157,46 +134,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnSpin.addEventListener('click', () => {
         if (state.isSpinning) return;
-
         state.isSpinning = true;
         btnSpin.disabled = true;
 
         const numPrizes = state.prizes.length;
         const prizeIndex = Math.floor(Math.random() * numPrizes);
         const prize = state.prizes[prizeIndex];
-
         const segmentAngle = 360 / numPrizes;
         const extraSpins = 5 + Math.floor(Math.random() * 5);
         const rotation = (extraSpins * 360) + (360 - (prizeIndex * segmentAngle) - (segmentAngle / 2));
-
         wheel.style.transform = `rotate(${rotation}deg)`;
 
         setTimeout(async () => {
             state.isSpinning = false;
             btnSpin.disabled = false;
-            
             state.currentParticipant.premio = prize.text;
             
-            // --- GUARDAR EN LA NUBE ---
-            const { error } = await supabaseClient
-                .from('participantes')
-                .insert([state.currentParticipant]);
-
-            if (error) {
-                alert('Error al sincronizar el premio: ' + error.message);
-            } else {
+            const { error } = await supabaseClient.from('participantes').insert([state.currentParticipant]);
+            if (error) alert('Error: ' + error.message);
+            else {
                 await fetchParticipants();
-
                 winnerPilotName.textContent = state.currentParticipant.piloto;
                 wonPrizeText.textContent = prize.text;
                 winnerOverlay.classList.remove('hidden');
-                
-                confetti({
-                    particleCount: 150,
-                    spread: 70,
-                    origin: { y: 0.6 },
-                    colors: ['#00F2FE', '#FF007F', '#00FF88']
-                });
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
             }
         }, 6100);
     });
@@ -210,56 +171,30 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { wheel.style.transition = 'transform 6s cubic-bezier(0.1, 0, 0, 1)'; }, 10);
     });
 
-    // --- Settings / Admin ---
-    btnConfig.addEventListener('click', () => {
-        renderPrizesConfig();
-        settingsModal.classList.remove('hidden');
-    });
-
-    btnCloseSettings.addEventListener('click', () => {
-        settingsModal.classList.add('hidden');
-    });
+    btnConfig.addEventListener('click', () => { renderPrizesConfig(); settingsModal.classList.remove('hidden'); });
+    btnCloseSettings.addEventListener('click', () => settingsModal.classList.add('hidden'); );
 
     function renderPrizesConfig() {
         prizesList.innerHTML = '';
         state.prizes.forEach((prize, index) => {
             const row = document.createElement('div');
             row.className = 'prize-row';
-            row.innerHTML = `
-                <input type="text" value="${prize.text}" data-index="${index}" class="edit-prize-text">
-                <input type="color" value="${prize.color}" data-index="${index}" class="edit-prize-color" style="width: 50px; padding: 0;">
-                <button class="icon-btn btn-remove-prize" data-index="${index}" style="background: rgba(255,0,0,0.1); border-color: rgba(255,0,0,0.2)">&times;</button>
-            `;
+            row.innerHTML = `<input type="text" value="${prize.text}" data-index="${index}" class="edit-prize-text"><input type="color" value="${prize.color}" data-index="${index}" class="edit-prize-color" style="width:50px;padding:0;"><button class="icon-btn btn-remove-prize" data-index="${index}">&times;</button>`;
             prizesList.appendChild(row);
         });
-
         document.querySelectorAll('.btn-remove-prize').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const index = e.currentTarget.dataset.index;
-                state.prizes.splice(index, 1);
+                state.prizes.splice(e.currentTarget.dataset.index, 1);
                 renderPrizesConfig();
             });
         });
     }
 
-    btnAddPrize.addEventListener('click', () => {
-        state.prizes.push({ text: 'Nuevo Premio', color: '#666666' });
-        renderPrizesConfig();
-    });
-
+    btnAddPrize.addEventListener('click', () => { state.prizes.push({ text: 'Nuevo Premio', color: '#666' }); renderPrizesConfig(); });
     btnSaveSettings.addEventListener('click', () => {
         const textInputs = document.querySelectorAll('.edit-prize-text');
         const colorInputs = document.querySelectorAll('.edit-prize-color');
-        
-        const newPrizes = [];
-        textInputs.forEach((input, i) => {
-            newPrizes.push({
-                text: input.value,
-                color: colorInputs[i].value
-            });
-        });
-
-        state.prizes = newPrizes;
+        state.prizes = Array.from(textInputs).map((input, i) => ({ text: input.value, color: colorInputs[i].value }));
         localStorage.setItem('fe_prizes', JSON.stringify(state.prizes));
         settingsModal.classList.add('hidden');
         renderWheel();
@@ -269,12 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
         participantsTableBody.innerHTML = '';
         state.participants.forEach(p => {
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${p.fecha ? p.fecha.split(',')[0] : ''}</td>
-                <td>${p.factura}</td>
-                <td>${p.piloto}</td>
-                <td style="font-weight: 700; color: var(--success)">${p.premio}</td>
-            `;
+            row.innerHTML = `<td>${p.fecha ? p.fecha.split(',')[0] : ''}</td><td>${p.factura}</td><td>${p.piloto}</td><td style="font-weight:700;color:var(--success)">${p.premio}</td>`;
             participantsTableBody.appendChild(row);
         });
     }
