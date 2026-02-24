@@ -4,6 +4,7 @@ const SUPABASE_KEY = 'sb_publishable_rm-U3aeXydu4W0wdSMLW5w_I4LIW5MO';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- State ---
     let state = {
         participants: [],
         prizes: JSON.parse(localStorage.getItem('fe_prizes')) || [
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isSpinning: false
     };
 
+    // --- DOM Elements ---
     const registrationView = document.getElementById('registration-view');
     const rouletteView = document.getElementById('roulette-view');
     const promoForm = document.getElementById('promo-form');
@@ -39,12 +41,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnDone = document.getElementById('btn-done');
     const participantsTableBody = document.querySelector('#participants-table tbody');
 
+    // --- Initialization ---
     async function init() {
         const today = new Date().toLocaleDateString();
         autoDateSpan.textContent = today;
         await fetchParticipants();
         renderWheel();
-        renderHistory();
     }
 
     async function fetchParticipants() {
@@ -61,16 +63,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function renderHistory() {
+        if (!participantsTableBody) return;
+        participantsTableBody.innerHTML = '';
+        state.participants.forEach(p => {
+            const row = document.createElement('tr');
+            const fechaStr = p.fecha ? (p.fecha.includes(',') ? p.fecha.split(',')[0] : p.fecha) : '';
+            row.innerHTML = `
+                <td>${fechaStr}</td>
+                <td>${p.factura || ''}</td>
+                <td>${p.piloto || ''}</td>
+                <td style="font-weight:700;color:var(--success)">${p.premio || ''}</td>
+            `;
+            participantsTableBody.appendChild(row);
+        });
+    }
+
+    // --- Navigation ---
     function showView(view) {
         registrationView.classList.add('hidden');
         rouletteView.classList.add('hidden');
-        if (view === 'registration') registrationView.classList.remove('hidden');
-        else if (view === 'roulette') {
+        if (view === 'registration') {
+            registrationView.classList.remove('hidden');
+        } else if (view === 'roulette') {
             rouletteView.classList.remove('hidden');
             renderWheel();
         }
     }
 
+    // --- Events ---
     promoForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const invoiceNum = document.getElementById('invoice-number').value.trim();
@@ -99,17 +120,24 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             showView('roulette');
         } catch (err) {
-            console.error('Error:', err.message);
+            console.error('Error validation:', err.message);
+            alert('Aviso: No se pudo verificar la factura en la nube, pero puedes jugar.');
+            showView('roulette');
         }
     });
 
-    btnBack.addEventListener('click', () => { if (!state.isSpinning) showView('registration'); });
+    btnBack.addEventListener('click', () => {
+        if (!state.isSpinning) showView('registration');
+    });
 
     function renderWheel() {
         wheel.innerHTML = '';
         const numSegments = state.prizes.length;
         const segmentAngle = 360 / numSegments;
-        const gradient = state.prizes.map((p, i) => `${p.color} ${(i * 360) / numSegments}deg ${((i + 1) * 360) / numSegments}deg`).join(', ');
+        const gradient = state.prizes.map((p, i) => 
+            `${p.color} ${(i * 360) / numSegments}deg ${((i + 1) * 360) / numSegments}deg`
+        ).join(', ');
+
         wheel.style.background = `conic-gradient(${gradient})`;
 
         state.prizes.forEach((prize, i) => {
@@ -150,15 +178,18 @@ document.addEventListener('DOMContentLoaded', () => {
             btnSpin.disabled = false;
             state.currentParticipant.premio = prize.text;
             
-            const { error } = await supabaseClient.from('participantes').insert([state.currentParticipant]);
-            if (error) alert('Error: ' + error.message);
-            else {
-                await fetchParticipants();
-                winnerPilotName.textContent = state.currentParticipant.piloto;
-                wonPrizeText.textContent = prize.text;
-                winnerOverlay.classList.remove('hidden');
-                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            try {
+                const { error } = await supabaseClient.from('participantes').insert([state.currentParticipant]);
+                if (error) throw error;
+            } catch (err) {
+                alert('Error al guardar en la nube: ' + err.message);
             }
+
+            await fetchParticipants();
+            winnerPilotName.textContent = state.currentParticipant.piloto;
+            wonPrizeText.textContent = prize.text;
+            winnerOverlay.classList.remove('hidden');
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         }, 6100);
     });
 
@@ -171,43 +202,55 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { wheel.style.transition = 'transform 6s cubic-bezier(0.1, 0, 0, 1)'; }, 10);
     });
 
-    btnConfig.addEventListener('click', () => { renderPrizesConfig(); settingsModal.classList.remove('hidden'); });
-    btnCloseSettings.addEventListener('click', () => settingsModal.classList.add('hidden'); );
+    // --- Settings Events ---
+    btnConfig.addEventListener('click', () => {
+        renderPrizesConfig();
+        fetchParticipants(); 
+        settingsModal.classList.remove('hidden');
+    });
+
+    btnCloseSettings.addEventListener('click', () => {
+        settingsModal.classList.add('hidden');
+    });
 
     function renderPrizesConfig() {
         prizesList.innerHTML = '';
         state.prizes.forEach((prize, index) => {
             const row = document.createElement('div');
             row.className = 'prize-row';
-            row.innerHTML = `<input type="text" value="${prize.text}" data-index="${index}" class="edit-prize-text"><input type="color" value="${prize.color}" data-index="${index}" class="edit-prize-color" style="width:50px;padding:0;"><button class="icon-btn btn-remove-prize" data-index="${index}">&times;</button>`;
+            row.innerHTML = `
+                <input type="text" value="${prize.text}" data-index="${index}" class="edit-prize-text">
+                <input type="color" value="${prize.color}" data-index="${index}" class="edit-prize-color" style="width:50px;padding:0;">
+                <button class="icon-btn btn-remove-prize" data-index="${index}">&times;</button>
+            `;
             prizesList.appendChild(row);
         });
+
         document.querySelectorAll('.btn-remove-prize').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                state.prizes.splice(e.currentTarget.dataset.index, 1);
+                const idx = e.currentTarget.dataset.index;
+                state.prizes.splice(idx, 1);
                 renderPrizesConfig();
             });
         });
     }
 
-    btnAddPrize.addEventListener('click', () => { state.prizes.push({ text: 'Nuevo Premio', color: '#666' }); renderPrizesConfig(); });
+    btnAddPrize.addEventListener('click', () => {
+        state.prizes.push({ text: 'Nuevo Premio', color: '#666' });
+        renderPrizesConfig();
+    });
+
     btnSaveSettings.addEventListener('click', () => {
         const textInputs = document.querySelectorAll('.edit-prize-text');
         const colorInputs = document.querySelectorAll('.edit-prize-color');
-        state.prizes = Array.from(textInputs).map((input, i) => ({ text: input.value, color: colorInputs[i].value }));
+        state.prizes = Array.from(textInputs).map((input, i) => ({
+            text: input.value,
+            color: colorInputs[i].value
+        }));
         localStorage.setItem('fe_prizes', JSON.stringify(state.prizes));
         settingsModal.classList.add('hidden');
         renderWheel();
     });
-
-    function renderHistory() {
-        participantsTableBody.innerHTML = '';
-        state.participants.forEach(p => {
-            const row = document.createElement('tr');
-            row.innerHTML = `<td>${p.fecha ? p.fecha.split(',')[0] : ''}</td><td>${p.factura}</td><td>${p.piloto}</td><td style="font-weight:700;color:var(--success)">${p.premio}</td>`;
-            participantsTableBody.appendChild(row);
-        });
-    }
 
     init();
 });
