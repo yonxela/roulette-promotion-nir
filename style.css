@@ -66,6 +66,11 @@ header {
     margin-bottom: 3rem;
 }
 
+.header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
 .logo-container h1 {
     font-size: 2.5rem;
     font-weight: 800;
@@ -75,7 +80,24 @@ header {
 .logo-container span {
     background: linear-gradient(90deg, var(--primary), var(--secondary));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+.logo-container img {
+    max-height: 60px;
+    max-width: 200px;
+    object-fit: contain;
+}
+
+.company-selector-container select {
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-family: inherit;
+    font-weight: 600;
 }
 
 .icon-btn {
@@ -109,6 +131,25 @@ header {
 
 h2 {
     margin-bottom: 2rem;
+    font-weight: 600;
+}
+
+/* Login View */
+#login-view {
+    max-width: 400px;
+    margin: 4rem auto;
+    text-align: center;
+}
+
+.login-header p {
+    color: var(--text-dim);
+    margin-bottom: 2rem;
+}
+
+.error-text {
+    color: var(--accent);
+    font-size: 0.9rem;
+    margin-top: 1rem;
     font-weight: 600;
 }
 
@@ -310,6 +351,24 @@ h2 {
 }
 
 /* Settings Modal Specifics */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.modal.hidden {
+    display: none;
+}
 .modal-content {
     background: #15162c;
     border-radius: 24px;
@@ -364,6 +423,160 @@ h2 {
     border-radius: 8px;
     color: white;
     flex-grow: 1;
+}
+
+/* Company Management */
+.companies-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.company-row {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 1.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border: 1px solid var(--glass-border);
+    transition: all 0.3s ease;
+}
+
+.company-row:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.company-info {
+    display: flex;
+    gap: 1.2rem;
+    flex-grow: 1;
+}
+
+.company-item-logo {
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    object-fit: contain;
+    background: #000;
+    padding: 2px;
+}
+
+.company-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.company-name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.company-name-row strong {
+    font-size: 1.1rem;
+    color: var(--primary);
+}
+
+.access-code-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 0, 127, 0.15);
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+}
+
+.access-code-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--text-dim);
+}
+
+.access-code-value {
+    font-family: monospace;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: white;
+    letter-spacing: 2px;
+}
+
+.company-meta {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 0.5rem 1.5rem;
+}
+
+.add-company-form.expanded {
+    background: rgba(0,0,0,0.3);
+    padding: 2rem;
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
+}
+
+.file-input-wrapper-horizontal {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(0,0,0,0.2);
+    padding: 0.5rem;
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+}
+
+.text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+
+/* History View Specifics */
+#history-view {
+    max-width: 1000px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.view-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+#btn-close-history {
+    width: auto;
+    margin-top: 0;
+}
+
+.table-container {
+    overflow-x: auto;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+}
+
+#full-history-table th,
+#full-history-table td {
+    padding: 1.2rem;
+    text-align: left;
+}
+
+#full-history-table tr:hover {
+    background: rgba(255, 255, 255, 0.03);
 }
 
 /* History Table */
